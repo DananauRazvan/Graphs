@@ -1,0 +1,291 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <queue>
+#include <stack>
+
+using namespace std;
+
+class Graph {
+    private:
+        int n;
+        int m;
+        int start;
+        int c; //Posibila eroare
+        static int noBC;
+        vector<vector<int>> adjList;
+        vector<vector<int>> adjListT;
+        vector<int> dist;
+        queue<int> q;
+        bool vis[100001] = {false};
+        bool visT[100001] = {false};
+        vector<int> solComp[100001];
+        stack<int> S;
+        vector<int> lvl;
+        vector<int> low;
+        vector<vector<int>> solBC;
+    public:
+        Graph() {};
+        void directedGraph();
+        void undirectedGraph();
+        void undirectedGraphBC();
+        void directedGraphTopSort();
+        void directedGraphCTC();
+        void bfs();
+        void dfs(int start);
+        void noConnComp();
+        void dfsBC(int start, int pred);
+        int getSolBC();
+        void dfsTopSort(int start, stack<int>& topSorted);
+        void topSort();
+        void dfsT(int start);
+        void printCTC();
+};
+
+int Graph :: noBC = 0;
+
+void Graph :: directedGraph() {
+    ifstream fin("bfs.in");
+
+    fin >> n >> m >> start;
+
+    adjList.resize(n + 1);
+
+    for (int i = 0; i < m; i++) {
+        int x, y;
+        fin >> x >> y;
+        adjList[x].push_back(y);
+    }
+
+    fin.close();
+}
+
+void Graph :: undirectedGraph() {
+    ifstream fin("dfs.in");
+
+    fin >> n >> m;
+
+    adjList.resize(n + 1);
+
+    for (int i = 0; i < m; i++) {
+        int x, y;
+        fin >> x >> y;
+        adjList[x].push_back(y);
+        adjList[y].push_back(x);
+    }
+
+    fin.close();
+}
+
+void Graph :: undirectedGraphBC() {
+    ifstream fin("biconex.in");
+
+    fin >> n >> m;
+
+    adjList.resize(n + 1);
+    solBC.resize(n + 1);
+    lvl.resize(n + 1);
+    low.resize(n + 1);
+
+    for (int i = 0; i < m; i++) {
+        int x, y;
+        fin >> x >> y;
+        adjList[x].push_back(y);
+        adjList[y].push_back(x);
+    }
+
+    fin.close();
+}
+
+void Graph :: directedGraphTopSort() {
+    ifstream fin("sortaret.in");
+
+    fin >> n >> m;
+
+    adjList.resize(n + 1);
+
+    for (int i = 0; i < m; i++) {
+        int x, y;
+        fin >> x >> y;
+        adjList[x].push_back(y);
+    }
+
+    fin.close();
+}
+
+void Graph :: directedGraphCTC() {
+    ifstream fin("ctc.in");
+
+    fin >> n >> m;
+
+    adjList.resize(n + 1);
+    adjListT.resize(n + 1);
+
+    for (int i = 0; i < m; i++) {
+        int x, y;
+        fin >> x >> y;
+        adjList[x].push_back(y);
+        adjListT[y].push_back(x);
+    }
+
+    fin.close();
+}
+
+void Graph :: bfs() {
+    ofstream fout("bfs.out");
+
+    q.push(start);
+
+    dist.resize(n + 1);
+    for (int i = 1; i <= n; i++)
+        dist[i] = -1;
+    dist[start] = 0;
+
+    while (!q.empty()) {
+        int nod = q.front();
+        q.pop();
+        for (auto i : adjList[nod])
+            if (dist[i] == -1) {
+                dist[i] = dist[nod] + 1;
+                q.push(i);
+            }
+    }
+
+    for (int i = 1; i <= n; i++)
+        fout << dist[i] << " ";
+
+    fout.close();
+}
+
+void Graph :: dfs(int start) {
+    vis[start] = true;
+
+    for (auto x : adjList[start])
+        if (!vis[x])
+            dfs(x);
+}
+
+void Graph :: noConnComp() {
+    ofstream fout("dfs.out");
+
+    int c = 0;
+
+    for (int i = 1; i <= n; i++)
+        if (!vis[i]) {
+            dfs(i);
+            c++;
+        }
+
+    fout << c;
+
+    fout.close();
+}
+
+void Graph :: dfsBC(int start, int pred) {
+    vis[start] = 1;
+    S.push(start);
+    lvl[start] = low[start] = lvl[pred] + 1;
+
+    for (auto x : adjList[start])
+        if (x != pred)
+            if (vis[x])
+                if (low[start] > lvl[x])
+                    low[start] = lvl[x];
+            else {
+                dfsBC(x, start);
+
+                if (low[start] > low[x])
+                    low[start] = low[x];
+
+                if (lvl[start] < low[x]) {
+                    noBC++;
+
+                    while (S.top() != x) {
+                        solBC[noBC].push_back(S.top());
+                        S.pop();
+                    }
+
+                    solBC[noBC].push_back(x);
+                    S.pop();
+                    solBC[noBC].push_back(start);
+                }
+            }
+
+}
+
+int Graph :: getSolBC() {
+    return noBC;
+}
+
+void Graph :: dfsTopSort(int start, stack<int>& topSorted) {
+    vis[start] = true;
+
+    for (auto x : adjList[start])
+        if (!vis[x])
+            dfsTopSort(x, topSorted);
+
+    topSorted.push(start);
+}
+
+void Graph :: topSort() {
+    ofstream fout("sortaret.out");
+
+    stack<int> topSorted;
+
+    for (int i = 1; i <= n; i++)
+        if (!vis[i])
+            dfsTopSort(i, topSorted);
+
+    while (!topSorted.empty()){
+        fout << topSorted.top() << " ";
+        topSorted.pop();
+    }
+
+    fout.close();
+}
+
+void Graph :: dfsT(int start) {
+    visT[start] = true;
+
+    solComp[c].push_back(start);
+
+    for (auto x : adjList[start])
+        if (!visT[x])
+            dfsT(x);
+}
+
+void Graph :: printCTC() {
+    ofstream fout("ctc.out");
+
+    stack<int> topSorted;
+
+    for (int i = 1; i <= n; i++)
+        if (!vis[i])
+            dfsTopSort(i, topSorted);
+
+    while (!topSorted.empty()) {
+        if (!visT[topSorted.top()]) {
+            c++;
+            dfsT(topSorted.top());
+        }
+        topSorted.pop();
+    }
+
+    cout << c << '\n';
+
+    for (int i = 0; i < c; i++) {
+        for (int j = 0; j < solComp[i].size(); j++)
+            cout << solComp[i][j] << " ";
+        cout << '\n';
+    }
+
+    fout.close();
+}
+int main()
+{
+    Graph X;
+    X.undirectedGraphBC();
+    X.dfsBC(1, 0);
+    cout << X.getSolBC();
+    return 0;
+}
