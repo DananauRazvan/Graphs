@@ -306,7 +306,9 @@ void Graph :: dijkstra() {
     ifstream fin("dijkstra.in");
     ofstream fout("dijkstra.out");
 
-    vector<list<pair<int, int>>> adjList;
+    vector<vector<pair<int, int>>> adjList;
+    priority_queue <pair<int, int>> q;
+    vector<bool> inQ (n + 1, false);
     int n, m;
 
     fin >> n >> m;
@@ -319,35 +321,28 @@ void Graph :: dijkstra() {
         adjList[a].push_back(make_pair(b, w));
     }
 
-    set<pair<int, int>> setProc;
     vector<int> dist(n + 1, INF);
 
     dist[1] = 0;
-    setProc.insert(make_pair(0, 1));
+    q.push(make_pair(0, 1));
 
-    while (!setProc.empty()) {
-        pair<int, int> tmp = *(setProc.begin());
-        setProc.erase(setProc.begin());
+    while (!q.empty()) {
+        int node = q.top().second;
 
-        int u = tmp.second;
+        q.pop();
 
-        list<pair<int, int>> :: iterator i;
-        for (i = adjList[u].begin(); i != adjList[u].end(); i++) {
-            int v = (*i).first;
-            int w = (*i).second;
-
-            if (dist[v] > dist[u] + w) {
-                if (dist[v] != INF)
-                    setProc.erase(setProc.find(make_pair(dist[v], v)));
-
-                dist[v] = dist[u] + w;
-                setProc.insert(make_pair(dist[v], v));
+        for (auto x : adjList[node])
+            if (dist[node] + x.second < dist[x.first]) {
+                dist[x.first] = dist[node] + x.second;
+                q.push(make_pair(dist[x.first], x.first));
             }
-        }
     }
 
     for (int i = 2; i <= n; i++)
-        fout << dist[i] << " ";
+        if (dist[i] != INF)
+            fout << dist[i] << " ";
+        else
+            fout << 0 << " ";
 }
 
 void Graph :: bellmanford() {
@@ -501,6 +496,6 @@ void Graph :: disjoint() {
 int main()
 {
     Graph X;
-    X.disjoint();
+    X.dijkstra();
     return 0;
 }
