@@ -80,12 +80,19 @@ int UndirectedGraph :: dfsCompConex(string outPath) {
 class DirectedGraph : public Graph {
     private:
         stack<int> topSorted;
+        vector<bool> visKos;
+        vector<vector<int>> adjListT;
+        vector<vector<int>> ssc;
+        int noSSC = 0;
     public:
         DirectedGraph(string inPath);
         void bfs(int start);
         vector<int> getBfs(string outPath);
         void dfsTopSort(int start);
         void topSort(string outPath);
+        void dfsKos(int start);
+        void kosaraju();
+        vector<vector<int>> getSSC(string outPath);
 };
 
 DirectedGraph :: DirectedGraph(string inPath) {
@@ -100,11 +107,15 @@ DirectedGraph :: DirectedGraph(string inPath) {
     adjList.resize(n + 1);
     vis.resize(n + 1);
     dist.resize(n + 1, -1);
+    visKos.resize(n + 1);
+    ssc.resize(n + 1);
+    adjListT.resize(n + 1);
 
     for (int i = 0; i < m; i++) {
         int x, y;
         in >> x >> y;
         adjList[x].push_back(y);
+        adjListT[y].push_back(x); //Doar pt Kosaraju
     }
 }
 
@@ -155,6 +166,98 @@ void DirectedGraph :: topSort(string outPath) {
     while (!topSorted.empty()) {
         out << topSorted.top() << " ";
         topSorted.pop();
+    }
+}
+
+void DirectedGraph :: dfsKos(int start) {
+    visKos[start] = true;
+    ssc[noSSC].push_back(start);
+
+    for (auto x : adjListT[start])
+        if (!visKos[x])
+            dfsKos(x);
+}
+
+void DirectedGraph :: kosaraju() {
+    for (int i = 1; i <= n; i++)
+        if (!vis[i])
+        dfsTopSort(i);
+
+    while (!topSorted.empty()) {
+        int x = topSorted.top();
+        topSorted.pop();
+
+        if (!visKos[x]) {
+            noSSC++;
+            dfsKos(x);
+        }
+    }
+}
+
+vector<vector<int>> DirectedGraph :: getSSC(string outPath) {
+    ofstream out(outPath);
+
+    out << noSSC << '\n';
+    for (int i = 1; i <= noSSC; i++) {
+        for (auto x : ssc[i])
+            out << x << " ";
+        out << '\n';
+    }
+
+    return ssc;
+}
+
+class HavelHakimiGraph : public Graph {
+    private:
+        vector<int> degrees;
+    public:
+        HavelHakimiGraph(string inPath);
+        bool isSimpleGraph(string outPath);
+};
+
+HavelHakimiGraph :: HavelHakimiGraph(string inPath) {
+    ifstream in(inPath);
+
+    int n;
+
+    in >> n;
+
+    this -> n = n;
+
+    for (int i = 0; i < n; i++) {
+        int x;
+        in >> x;
+        degrees.push_back(x);
+    }
+}
+
+bool HavelHakimiGraph :: isSimpleGraph(string outPath) {
+    ofstream out(outPath);
+
+    while (true) {
+        sort(degrees.begin(), degrees.end(), greater<int>());
+
+        if (degrees[0] == 0) {
+            out << "True";
+            return true;
+        }
+
+        int x = degrees[0];
+        degrees.erase(degrees.begin() + 0);
+
+        if (x > degrees.size()) {
+            out << "False";
+            return false;
+        }
+
+        for (int i = 0; i < x; i++) {
+            degrees[i]--;
+
+            if (degrees[i] < 0) {
+                out << "False";
+                return false;
+            }
+        }
     }
 }
 
@@ -593,10 +696,78 @@ int ResidualGraph :: findMaxFlow(int start, int dest, string outPath) {
 
     return flowValue;
 }
-///////////////////////////////
+
+class MultiGraph : public Graph {
+    private:
+        vector<vector<pair<int, int>>> adjList;
+        vector<int> sol;
+    public:
+        MultiGraph(string inPath);
+        bool evenDegree();
+        void euler(int start);
+        void getEuler(string outPath);
+};
+
+MultiGraph :: MultiGraph(string inPath) {
+    ifstream in(inPath);
+
+    int n, m;
+
+    in >> n >> m;
+
+    this -> n = n;
+    this -> m = m;
+    vis.resize(n + 1);
+    adjList.resize(n + 1);
+
+    for (int i = 0; i < m; i++) {
+        int x, y;
+        in >> x >> y;
+        adjList[x].push_back(make_pair(y, i));
+        adjList[y].push_back(make_pair(x, i));
+    }
+}
+
+bool MultiGraph :: evenDegree() {
+    for (int i = 1; i <= n; i++)
+        if (adjList[i].size() % 2)
+            return false;
+
+    return true;
+}
+
+void MultiGraph :: euler(int start) {
+    while (!adjList[start].empty()) {
+        int x = adjList[start].back().first;
+        int y = adjList[start].back().second;
+        adjList[start].pop_back();
+
+        if(!vis[y]) {
+            vis[y] = 1;
+            euler(x);
+        }
+    }
+
+    sol.push_back(start);
+}
+
+void MultiGraph :: getEuler(string outPath) {
+    ofstream out(outPath);
+
+    if (evenDegree()) {
+        euler(1);
+
+        for (int i = 0; i < m; i++)
+            out << sol[i] << " ";
+    }
+    else
+        out << "-1";
+}
 
 int main()
 {
+    /// Tema 1
+
     /* dfs O(n + m)
     UndirectedGraph X = UndirectedGraph("dfs.in");
     X.dfsCompConex("dfs.out");
@@ -611,6 +782,17 @@ int main()
     /* Top Sort O(n + m)
     DirectedGraph X = DirectedGraph("sortaret.in");
     X.topSort("sortaret.out");
+    */
+
+    /* ctc O(n + m)
+    DirectedGraph X = DirectedGraph("ctc.in");
+    X.kosaraju();
+    X.getSSC("ctc.out");
+    */
+
+    /*
+    HavelHakimiGraph X = HavelHakimiGraph("havel-hakimi.in");
+    X.isSimpleGraph("havel-hakimi.out");
     */
 
     /// Tema 2
@@ -655,5 +837,11 @@ int main()
     X.getRoyFloyd("royfloyd.out");
     */
 
+    /// Tema 4
+
+    /*
+    MultiGraph X = MultiGraph("ciclueuler.in");
+    X.getEuler("ciclueuler.out");
+    */
     return 0;
 }
